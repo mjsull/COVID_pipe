@@ -86,25 +86,27 @@ def run_ccs(args):
                      % (args.threads, repo_dir, pilon_read_1, args.threads, args.working_dir, args.working_dir), shell=True).wait()
     subprocess.Popen("pilon --fix bases --threads %s --mindepth 20 --genome %s/db/COVID.fa --unpaired %s/ref.bam --tracks --output %s/pilon"
                      % (args.threads, repo_dir, args.working_dir, args.working_dir), shell=True).wait()
-    with open(args.working_dir + '/pilon.fa') as f:
+    with open(args.working_dir + '/pilon.fasta') as f:
         seq = ''
         for line in f:
             if not line.startswith('>'):
                 seq += line.rstrip()
+    seq = list(seq)
     with open(args.working_dir + '/pilonCoverage.wig') as f:
         f.readline()
         f.readline()
         for num, line in enumerate(f):
             if int(line.rstrip()) < 20:
                 seq[num] = 'n'
-    with open(args.working_dir + '/COVID.fa', 'w') as o:
+    seq = ''.join(seq)
+    with open(args.working_dir + '/COVID.fasta', 'w') as o:
         o.write(">genome\n")
         for i in range(0, len(seq), 80):
             o.write(seq[i:i+80] + '\n')
     subprocess.Popen("prokka  --cpus %s --outdir %s/prokka --prefix sequence --kingdom Viruses --proteins %s/db/COVID.gbk  %s/COVID.fasta "
                      % (args.threads, args.working_dir, repo_dir, args.working_dir), shell=True).wait()
     subprocess.Popen("canu -d %s/canu -pacbio-corrected %s -p canu genomeSize=%d useGrid=false minOverlapLength=250"
-                    % (args.working_dir, args.ccs_reads, virus_length), shell=True).wait()
+                    % (args.working_dir, pilon_read_1, virus_length), shell=True).wait()
     subprocess.Popen("minimap2 -t %s -ax map-pb %s/canu/canu.fa %s | samtools view -b | samtools sort -@ %s -o %s/assembly.bam -"
                      " && samtools index %s/assembly.bam"
                      % (args.threads, repo_dir, pilon_read_1, args.threads, args.working_dir, args.working_dir), shell=True).wait()
