@@ -4,23 +4,6 @@ import argparse
 import subprocess
 import sys, os
 
-# # Set up conda environment
-# module purge all
-# unset PYTHONPATH
-# unset PERL5LIB
-# unset R_LIBS
-# module load anaconda2
-# module load zlib
-# conda create -n covid19 pilon cutadapt minimap2 samtools
-# source activate covid19
-#
-# # Gather terminal primers to remove
-# awkt '{print ">" $1 "\n^" $2}' SARS-CoV-2_primers_left.txt      >  SARS-CoV-2_primers_5prime.fa
-# awkt '{print ">" $1 "\n^" $2}' SARS-CoV-2_primers_right.txt     >> SARS-CoV-2_primers_5prime.fa
-# awkt '{print ">" $1 "\n" $3 "$"}' SARS-CoV-2_primers_right.txt  >  SARS-CoV-2_primers_3prime.fa
-# awkt '{print ">" $1 "\n" $3 "$"}' SARS-CoV-2_primers_left.txt   >> SARS-CoV-2_primers_3prime.fa
-
-# Run cutadapt to remove primers
 
 repo_dir = sys.path[0]
 virus_length = 29760
@@ -99,22 +82,31 @@ def run_ccs(args):
             if int(line.rstrip()) < 20:
                 seq[num] = 'n'
     seq = ''.join(seq)
-    with open(args.working_dir + '/COVID.fasta', 'w') as o:
-        o.write(">genome\n")
+    seq = seq.strip('n')
+    with open(args.working_dir + '/%s.fasta' % args.sample, 'w') as o:
+        o.write(">%s\n" % args.sample)
         for i in range(0, len(seq), 80):
             o.write(seq[i:i+80] + '\n')
-    subprocess.Popen("prokka  --cpus %s --outdir %s/prokka --prefix sequence --kingdom Viruses --proteins %s/db/COVID.gbk  %s/COVID.fasta "
-                     % (args.threads, args.working_dir, repo_dir, args.working_dir), shell=True).wait()
-    subprocess.Popen("canu -d %s/canu -pacbio-corrected %s -p canu genomeSize=%d useGrid=false minOverlapLength=250"
-                    % (args.working_dir, pilon_read_1, virus_length), shell=True).wait()
-    subprocess.Popen("minimap2 -t %s -ax map-pb %s/canu/canu.fa %s | samtools view -b | samtools sort -@ %s -o %s/assembly.bam -"
+    subprocess.Popen("prokka --force --cpus %s --outdir %s/prokka --prefix %s --kingdom Viruses --proteins %s/db/COVID.gbk  %s/%s.fasta "
+                     % (args.threads, args.working_dir, args.sample, repo_dir, args.working_dir, args.sample), shell=True).wait()
+    if bp / virus_length > 60:
+        downsample = 60 / (bp / virus_length)
+        subprocess.Popen("seqtk sample %s/reads.1.fq.gz %f | gzip > %s/reads.canu.1.fq.gz"
+                         % (args.working_dir, downsample, args.working_dir), shell=True).wait()
+        canu_reads_1 = "%s/reads.canu.1.fq.gz" % args.working_dir
+    else:
+        canu_reads_1 = "%s/reads.1.fq.gz" % args.working_dir
+    subprocess.Popen("seqkit rmdup -s %s > %s/rmdup.fastq" % (canu_reads_1, args.working_dir), shell=True).wait()
+    subprocess.Popen("canu -d %s/canu -pacbio-corrected %s/rmdup.fastq -p canu genomeSize=%d useGrid=false minOverlapLength=250"
+                    % (args.working_dir, args.working_dir, virus_length), shell=True).wait()
+    subprocess.Popen("minimap2 -t %s -ax map-pb %s/canu/canu.contigs.fasta %s | samtools view -b | samtools sort -@ %s -o %s/assembly.bam -"
                      " && samtools index %s/assembly.bam"
-                     % (args.threads, repo_dir, pilon_read_1, args.threads, args.working_dir, args.working_dir), shell=True).wait()
-    subprocess.Popen("pilon --fix bases --threads %s --mindepth 20 --genome %s/canu/canu.fa --unpaired %s/assembly.bam --tracks --output %s/assembly_pilon"
-                     % (args.threads, repo_dir, args.working_dir, args.working_dir), shell=True).wait()
+                     % (args.threads, args.working_dir, pilon_read_1, args.threads, args.working_dir, args.working_dir), shell=True).wait()
+    subprocess.Popen("pilon --fix bases --threads %s --mindepth 20 --genome %s/canu/canu.contigs.fasta --unpaired %s/assembly.bam --tracks --output %s/assembly_pilon"
+                     % (args.threads, args.working_dir, args.working_dir, args.working_dir), shell=True).wait()
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 parser = argparse.ArgumentParser(prog='COVID pipeline', formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description='pipeline for the assembly, mapping, base calling of viruses\n' \
                                             'Version: %s\n' 
@@ -128,6 +120,7 @@ parser.add_argument('-r2', '--read_2', action='store', help='Illumina pair 2')
 parser.add_argument('-p', '--ccs_reads', action='store', help='Pacbio CCS reads')
 parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
+parser.add_argument('-s', '--sample', action='store', help='sample name')
 parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon')
 parser.add_argument('-v', '--version', action='store_true', help="print version and exit")
 
