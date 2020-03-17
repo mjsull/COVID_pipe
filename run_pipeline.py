@@ -41,10 +41,29 @@ def run_illumina(args):
                      % (args.threads, repo_dir, pilon_read_1, pilon_read_2, args.threads, args.working_dir, args.working_dir), shell=True).wait()
     subprocess.Popen("pilon --fix bases --threads %s --mindepth 20 --genome %s/db/COVID.fa --frags %s/ref.bam --tracks --output %s/pilon"
                      % (args.threads, repo_dir, args.working_dir, args.working_dir), shell=True).wait()
+    with open(args.working_dir + '/pilon.fasta') as f:
+        seq = ''
+        for line in f:
+            if not line.startswith('>'):
+                seq += line.rstrip()
+    seq = list(seq)
+    with open(args.working_dir + '/pilonCoverage.wig') as f:
+        f.readline()
+        f.readline()
+        for num, line in enumerate(f):
+            if int(line.rstrip()) < 20:
+                seq[num] = 'n'
+    seq = ''.join(seq)
+    seq = seq.strip('n')
+    with open(args.working_dir + '/%s.fasta' % args.sample, 'w') as o:
+        o.write(">%s\n" % args.sample)
+        for i in range(0, len(seq), 80):
+            o.write(seq[i:i + 80] + '\n')
+    subprocess.Popen(
+        "prokka --force --cpus %s --outdir %s/prokka --prefix %s --kingdom Viruses --proteins %s/db/COVID.gbk  %s/%s.fasta "
+        % (args.threads, args.working_dir, args.sample, repo_dir, args.working_dir, args.sample), shell=True).wait()
     subprocess.Popen("shovill --outdir %s/shovill --R1 %s --R2 %s --gsize %d --cpus %s"
                      % (args.working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
-    subprocess.Popen("prokka  --cpus %s --outdir %s/prokka --prefix sequence --kingdom Viruses --proteins %s/db/COVID.gbk  %s/pilon.fasta "
-                     % (args.threads, args.working_dir, repo_dir, args.working_dir), shell=True).wait()
 
 
 
