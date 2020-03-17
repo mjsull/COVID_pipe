@@ -9,30 +9,51 @@ repo_dir = sys.path[0]
 virus_length = 29760
 
 def run_illumina(args):
-    subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a "
-                     "file:%s/db/SARS-CoV-2_primers_3prime_NI.fa -o %s/reads.1.fq.gz %s > %s/cutadapt.1.log"
-                     % (args.threads, repo_dir, repo_dir, args.working_dir, args.read_1, args.working_dir), shell=True).wait()
-    subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a "
-                     "file:%s/db/SARS-CoV-2_primers_3prime_NI.fa -o %s/reads.2.fq.gz %s > %s/cutadapt.2.log"
-                     % (args.threads, repo_dir, repo_dir, args.working_dir, args.read_2, args.working_dir), shell=True).wait()
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p1")):
+        if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
+            p1r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p1", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p1")):
+        if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
+            p1r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p1", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p2")):
+        if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
+            p2r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p2", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p2")):
+        if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
+            p2r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p2", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p1")):
+        if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
+            p3r1 = os.path.join(args.illumina_folder, args.sample + "-2p1", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p1")):
+        if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
+            p3r2 = os.path.join(args.illumina_folder, args.sample + "-2p1", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p2")):
+        if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
+            p4r1 = os.path.join(args.illumina_folder, args.sample + "-2p2", i)
+    for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p2")):
+        if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
+            p4r2 = os.path.join(args.illumina_folder, args.sample + "-2p2", i)
+
+    subprocess.Popen("cat %s %s %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, p3r1, p4r1, args.working_dir), shell=True).wait()
+    subprocess.Popen("cat %s %s %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, p3r2, p4r2, args.working_dir), shell=True).wait()
+    subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a file:%s/db/SARS-CoV-2_primers_3prime_NI.fa"
+                     " -G file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -A file:%s/db/SARS-CoV-2_primers_3prime_NI.fa "
+                     "-o %s/reads.1.fq.gz -p %s/reads.2.fq.gz %s/combined.1.fastq.gz %s/combined.2.fastq.gz > %s/cutadapt.1.log"
+                     % (args.threads, repo_dir, repo_dir, repo_dir, repo_dir, args.working_dir, args.working_dir,
+                        args.working_dir, args.working_dir, args.working_dir), shell=True).wait()
     with open(args.working_dir + '/cutadapt.1.log') as f:
         for line in f:
             if line.startswith("Total written (filtered):"):
                 bp = int(line.split()[3].replace(',', ''))
                 break
-    with open(args.working_dir + '/cutadapt.2.log') as f:
-        for line in f:
-            if line.startswith("Total written (filtered):"):
-                bp += int(line.split()[3].replace(',', ''))
-                break
     if bp / virus_length > args.coverage_pilon:
         downsample = args.coverage_pilon / (bp / virus_length)
         subprocess.Popen("seqtk sample %s/reads.1.fq.gz %f | gzip > %s/reads.pilon.1.fq.gz"
                          % (args.working_dir, downsample, args.working_dir), shell=True).wait()
-        subprocess.Popen("seqtk sample %s/reads.1.fq.gz %f | gzip > %s/reads.pilon.1.fq.gz"
+        subprocess.Popen("seqtk sample %s/reads.2.fq.gz %f | gzip > %s/reads.pilon.2.fq.gz"
                          % (args.working_dir, downsample, args.working_dir), shell=True).wait()
         pilon_read_1 = "%s/reads.pilon.1.fq.gz" % args.working_dir
-        pilon_read_2 = "%s/reads.pilon.1.fq.gz" % args.working_dir
+        pilon_read_2 = "%s/reads.pilon.2.fq.gz" % args.working_dir
     else:
         pilon_read_1 = "%s/reads.1.fq.gz" % args.working_dir
         pilon_read_2 = "%s/reads.2.fq.gz" % args.working_dir
@@ -134,8 +155,7 @@ parser = argparse.ArgumentParser(prog='COVID pipeline', formatter_class=argparse
 
 
 
-parser.add_argument('-r1', '--read_1', action='store', help='Illumina pair 1')
-parser.add_argument('-r2', '--read_2', action='store', help='Illumina pair 2')
+parser.add_argument('-i', '--illumina_folder', action='store', help='Folder with set of 4 illumina reads')
 parser.add_argument('-p', '--ccs_reads', action='store', help='Pacbio CCS reads')
 parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
@@ -156,7 +176,7 @@ if not os.path.exists(args.working_dir):
     os.makedirs(args.working_dir)
 if not args.ccs_reads is None:
     run_ccs(args)
-elif not args.read_1 is None and not args.read_2 is None:
+elif not args.illumina_folder is None:
     run_illumina(args)
 else:
     sys.exit("Need read_1 and read_2 set or ccs_reads set")
