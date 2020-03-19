@@ -60,8 +60,17 @@ def run_illumina(args):
                 p4r2 = os.path.join(args.illumina_folder, args.sample + "-2p2-1step", i)
 
 
-    subprocess.Popen("cat %s %s %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, p3r1, p4r1, args.working_dir), shell=True).wait()
-    subprocess.Popen("cat %s %s %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, p3r2, p4r2, args.working_dir), shell=True).wait()
+    if args.primer_set == '0':
+        subprocess.Popen("cat %s %s %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, p3r1, p4r1, args.working_dir), shell=True).wait()
+        subprocess.Popen("cat %s %s %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, p3r2, p4r2, args.working_dir), shell=True).wait()
+    elif args.primer_set == '1':
+        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, args.working_dir), shell=True).wait()
+        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, args.working_dir), shell=True).wait()
+    elif args.primer_set == '2':
+        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p3r1, p4r1, args.working_dir), shell=True).wait()
+        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p3r2, p4r2, args.working_dir), shell=True).wait()
+
+
     subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a file:%s/db/SARS-CoV-2_primers_3prime_NI.fa"
                      " -G file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -A file:%s/db/SARS-CoV-2_primers_3prime_NI.fa "
                      "-o %s/reads.1.fq.gz -p %s/reads.2.fq.gz %s/combined.1.fastq.gz %s/combined.2.fastq.gz > %s/cutadapt.1.log"
@@ -179,8 +188,9 @@ parser.add_argument('-p', '--ccs_reads', action='store', help='Pacbio CCS reads'
 parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
 parser.add_argument('-s', '--sample', action='store', help='sample name')
-parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon')
+parser.add_argument('-c', '--cove`rage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon')
 parser.add_argument('-v', '--version', action='store_true', help="print version and exit")
+parser.add_argument('-x', '--primer_set', action='store', default='0', help="which primer set to use")
 
 
 args = parser.parse_args()
