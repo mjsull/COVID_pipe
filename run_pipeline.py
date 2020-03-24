@@ -9,87 +9,18 @@ repo_dir = sys.path[0]
 virus_length = 29760
 
 def run_illumina(args):
-    p1r1 = ''
-    p1r2 = ''
-    p2r1 = ''
-    p2r2 = ''
-    p3r1 = ''
-    p3r2 = ''
-    p4r1 = ''
-    p4r2 = ''
-    if os.path.exists(os.path.join(args.illumina_folder, args.sample + "-1-5p1")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p1")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p1r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p1", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p1r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p1", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-1-5p1-1step")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p1-1step")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p1r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p1-1step", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p1r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p1-1step", i)
-    if os.path.exists(os.path.join(args.illumina_folder, args.sample + "-1-5p2")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p2")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p2r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p2", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p2r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p2", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-1-5p2-1step")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5p2-1step")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p2r1 = os.path.join(args.illumina_folder, args.sample + "-1-5p2-1step", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p2r2 = os.path.join(args.illumina_folder, args.sample + "-1-5p2-1step", i)
-    if os.path.exists(os.path.join(args.illumina_folder, args.sample + "-2p1")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p1")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p3r1 = os.path.join(args.illumina_folder, args.sample + "-2p1", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p3r2 = os.path.join(args.illumina_folder, args.sample + "-2p1", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-2p1-1step")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p1-1step")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p3r1 = os.path.join(args.illumina_folder, args.sample + "-2p1-1step", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p3r2 = os.path.join(args.illumina_folder, args.sample + "-2p1-1step", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-1-5")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-1-5")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p3r1 = os.path.join(args.illumina_folder, args.sample + "-1-5", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p3r2 = os.path.join(args.illumina_folder, args.sample + "-1-5", i)
-    if os.path.exists(os.path.join(args.illumina_folder, args.sample + "-2p2")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p2")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p4r1 = os.path.join(args.illumina_folder, args.sample + "-2p2", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p4r2 = os.path.join(args.illumina_folder, args.sample + "-2p2", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-2p2-1step")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2p2-1step")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p4r1 = os.path.join(args.illumina_folder, args.sample + "-2p2-1step", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p4r2 = os.path.join(args.illumina_folder, args.sample + "-2p2-1step", i)
-    elif os.path.exists(os.path.join(args.illumina_folder, args.sample + "-2")):
-        for i in os.listdir(os.path.join(args.illumina_folder, args.sample + "-2")):
-            if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
-                p4r1 = os.path.join(args.illumina_folder, args.sample + "-2", i)
-            if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
-                p4r2 = os.path.join(args.illumina_folder, args.sample + "-2", i)
-
-
-    if args.primer_set == '0':
-        subprocess.Popen("cat %s %s %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, p3r1, p4r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, p3r2, p4r2, args.working_dir), shell=True).wait()
-    elif args.primer_set == '1':
-        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, args.working_dir), shell=True).wait()
-    elif args.primer_set == '2':
-        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p3r1, p4r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p3r2, p4r2, args.working_dir), shell=True).wait()
-
-
+    read1s = []
+    read2s = []
+    suffixes = ["-1-5p1", "", "-1-5p1-1step", "-1-5p2", "-1-5p2-1step", "-2p1", "-2p1-1step", "-1-5", "-2p2", "-2p2-1step", "-2"]
+    for suffix in suffixes:
+        if os.path.exists(os.path.join(args.illumina_folder, args.sample + suffix)):
+            for i in os.listdir(os.path.join(args.illumina_folder, args.sample + suffix)):
+                if i.startswith(args.sample) and i.endswith("R1_001.fastq.gz"):
+                    read1s.append(os.path.join(args.illumina_folder, args.sample + suffix, i))
+                if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
+                    read2s.append(os.path.join(args.illumina_folder, args.sample + suffix, i))
+    subprocess.Popen("cat %s  > %s/combined.1.fastq.gz" % (' '.join(read1s), args.working_dir), shell=True).wait()
+    subprocess.Popen("cat %s  > %s/combined.2.fastq.gz" % (' '.join(read2s), args.working_dir), shell=True).wait()
     subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a file:%s/db/SARS-CoV-2_primers_3prime_NI.fa"
                      " -G file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -A file:%s/db/SARS-CoV-2_primers_3prime_NI.fa "
                      "-o %s/reads.1.fq.gz -p %s/reads.2.fq.gz %s/combined.1.fastq.gz %s/combined.2.fastq.gz > %s/cutadapt.1.log"
@@ -130,8 +61,8 @@ def run_illumina(args):
     subprocess.Popen(
         "prokka --force --cpus %s --outdir %s/prokka --prefix %s --kingdom Viruses --proteins %s/db/COVID.gbk  %s/%s.fasta "
         % (args.threads, args.working_dir, args.sample, repo_dir, args.working_dir, args.sample), shell=True).wait()
-    subprocess.Popen("shovill --outdir %s/shovill --R1 %s --R2 %s --gsize %d --cpus %s"
-                     % (args.working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
+    # subprocess.Popen("shovill --outdir %s/shovill --R1 %s --R2 %s --gsize %d --cpus %s"
+    #                  % (args.working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
 
 
 
