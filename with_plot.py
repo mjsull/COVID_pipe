@@ -3,6 +3,7 @@
 import argparse
 import subprocess
 import sys, os
+import matplotlib.pyplot as plt
 
 
 repo_dir = sys.path[0]
@@ -77,43 +78,63 @@ def run_illumina(args):
                 p4r1 = os.path.join(args.illumina_folder, args.sample + "-2", i)
             if i.startswith(args.sample) and i.endswith("R2_001.fastq.gz"):
                 p4r2 = os.path.join(args.illumina_folder, args.sample + "-2", i)
+    fig, axs = plt.subplots(6, sharex=True, sharey=True, gridspec_kw={'hspace': 0})
+    for runthrough in ['2', '1', '0']:
+        if runthrough == '0':
+            subprocess.Popen("cat %s > %s/combined.1.fastq.gz" % (' '.join([p1r1, p2r1, p3r1, p4r1]), args.working_dir), shell=True).wait()
+            subprocess.Popen("cat %s > %s/combined.2.fastq.gz" % (' '.join([p1r2, p2r2, p3r2, p4r2]), args.working_dir), shell=True).wait()
+        elif runthrough == '1':
+            subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, args.working_dir), shell=True).wait()
+            subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, args.working_dir), shell=True).wait()
+        elif runthrough == '2':
+            subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p3r1, p4r1, args.working_dir), shell=True).wait()
+            subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p3r2, p4r2, args.working_dir), shell=True).wait()
+        subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a file:%s/db/SARS-CoV-2_primers_3prime_NI.fa"
+                         " -G file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -A file:%s/db/SARS-CoV-2_primers_3prime_NI.fa "
+                         "-o %s/reads.1.fq.gz -p %s/reads.2.fq.gz %s/combined.1.fastq.gz %s/combined.2.fastq.gz > %s/cutadapt.1.log"
+                         % (args.threads, repo_dir, repo_dir, repo_dir, repo_dir, args.working_dir, args.working_dir,
+                            args.working_dir, args.working_dir, args.working_dir), shell=True).wait()
+        pilon_read_1 = "%s/reads.1.fq.gz" % args.working_dir
+        pilon_read_2 = "%s/reads.2.fq.gz" % args.working_dir
+        subprocess.Popen("minimap2 -t %s -ax sr %s/db/COVID.fa %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
+                         " && samtools index %s/ref.bam"
+                         % (args.threads, repo_dir, pilon_read_1, pilon_read_2, args.threads, args.working_dir, args.working_dir), shell=True).wait()
+        subprocess.Popen("pilon --fix bases --threads %s --mindepth 10 --genome %s/db/COVID.fa --frags %s/ref.bam --tracks --output %s/pilon.%s"
+                         % (args.threads, repo_dir, args.working_dir, args.working_dir, runthrough), shell=True).wait()
+        with open("%s/pilon.%sCoverage.wig" % (args.working_dir, runthrough)) as f:
+            f.readline()
+            f.readline()
+            y = []
+            y2 = []
+            for line in f:
+                y.append(int(line.rstrip()))
+                y2.append(min([int(line.rstrip()), 100]))
+        axs[int(runthrough)].plot(y)
+        if runthrough == '0':
+            tname = "both"
+        if runthrough == '1':
+            tname = "set 1"
+        if runthrough == '2':
+            tname = "set 2"
+        axs[int(runthrough)].text(virus_length/2,0, tname, size=12,
+                           horizontalalignment="center")
+        axs[int(runthrough)+3].plot(y2)
+        axs[int(runthrough)+3].text(virus_length/2,0, tname, size=12,
+                           horizontalalignment="center")
+    for ax in axs.flat:
+        ax.set(xlabel='position', ylabel='coverage')
 
-
-    if args.primer_set == '0':
-        subprocess.Popen("cat %s %s %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, p3r1, p4r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, p3r2, p4r2, args.working_dir), shell=True).wait()
-    elif args.primer_set == '1':
-        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p1r1, p2r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p1r2, p2r2, args.working_dir), shell=True).wait()
-    elif args.primer_set == '2':
-        subprocess.Popen("cat %s %s > %s/combined.1.fastq.gz" % (p3r1, p4r1, args.working_dir), shell=True).wait()
-        subprocess.Popen("cat %s %s > %s/combined.2.fastq.gz" % (p3r2, p4r2, args.working_dir), shell=True).wait()
-
-
-    subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -a file:%s/db/SARS-CoV-2_primers_3prime_NI.fa"
-                     " -G file:%s/db/SARS-CoV-2_primers_5prime_NI.fa -A file:%s/db/SARS-CoV-2_primers_3prime_NI.fa "
-                     "-o %s/reads.1.fq.gz -p %s/reads.2.fq.gz %s/combined.1.fastq.gz %s/combined.2.fastq.gz > %s/cutadapt.1.log"
-                     % (args.threads, repo_dir, repo_dir, repo_dir, repo_dir, args.working_dir, args.working_dir,
-                        args.working_dir, args.working_dir, args.working_dir), shell=True).wait()
-    with open(args.working_dir + '/cutadapt.1.log') as f:
-        for line in f:
-            if line.startswith("Total written (filtered):"):
-                bp = int(line.split()[3].replace(',', ''))
-                break
-    pilon_read_1 = "%s/reads.1.fq.gz" % args.working_dir
-    pilon_read_2 = "%s/reads.2.fq.gz" % args.working_dir
-    subprocess.Popen("minimap2 -t %s -ax sr %s/db/COVID.fa %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
-                     " && samtools index %s/ref.bam"
-                     % (args.threads, repo_dir, pilon_read_1, pilon_read_2, args.threads, args.working_dir, args.working_dir), shell=True).wait()
-    subprocess.Popen("pilon --fix bases --threads %s --mindepth 10 --genome %s/db/COVID.fa --frags %s/ref.bam --tracks --output %s/pilon"
-                     % (args.threads, repo_dir, args.working_dir, args.working_dir), shell=True).wait()
-    with open(args.working_dir + '/pilon.fasta') as f:
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    plt.savefig(args.working_dir + '/' + args.sample + '.png', dpi=300)
+    with open(args.working_dir + '/pilon.0.fasta') as f:
         seq = ''
         for line in f:
             if not line.startswith('>'):
                 seq += line.rstrip()
     seq = list(seq)
-    with open(args.working_dir + '/pilonCoverage.wig') as f:
+    with open(args.working_dir + '/pilon.0Coverage.wig') as f:
         f.readline()
         f.readline()
         for num, line in enumerate(f):
@@ -123,6 +144,8 @@ def run_illumina(args):
     if seq.endswith('aaa'):
         seq = seq.rstrip('a')
     seq = seq.strip('n')
+    if 'n' in seq[-5:]:
+        seq = seq[:-5].rstrip('n')
     with open(args.working_dir + '/%s.fasta' % args.sample, 'w') as o:
         o.write(">%s\n" % args.sample)
         for i in range(0, len(seq), 80):
