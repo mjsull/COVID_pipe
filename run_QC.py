@@ -13,7 +13,7 @@ def create_plots(sample_folder, amplified, threads=12):
     if not os.path.exists(qc_dir):
         os.makedirs(qc_dir)
     count = 0
-    pp = PdfPages('multipage.pdf')
+    pp = PdfPages('%s/quality_control.pdf' % qc_dir)
 
     # main coverage bit
     subprocess.Popen("samtools depth -aa %s/pipeline/ref.bam > %s/coverage.txt" % (sample_folder, qc_dir),
@@ -35,7 +35,7 @@ def create_plots(sample_folder, amplified, threads=12):
             if not line.startswith('>'):
                 length += len(line.rstrip())
                 ns += line.lower().count('n')
-    fig.suptitle("all reads\nconsenus %d bp\n%d Ns" % (length, ns), fontsize=16)
+    fig.suptitle("all reads\nconsensus %d bp long\n%d Ns" % (length, ns), fontsize=10)
     for ax in axs.flat:
         ax.set(xlabel='position', ylabel='coverage')
 
@@ -58,12 +58,14 @@ def create_plots(sample_folder, amplified, threads=12):
         if not read1 is None and not read2 is None:
             count += 1
     if count == 1:
-        for i in os.listdir(repo_dir + '/'):
-            if i.startswith("SARS-CoV-2") and i.endswith(".tsv"):
-                with open(os.path.join(repo_dir, i)) as f:
+        for i in os.listdir(repo_dir + '/db'):
+            if i.startswith("SARS-CoV-2") and i.endswith(".csv"):
+                with open(os.path.join(repo_dir, 'db', i)) as f:
                     labels = []
                     vals = []
+                    xnums = []
                     f.readline()
+                    num = 1
                     for line in f:
                         if line.split()[0].endswith("LEFT"):
                             label = line.split()[0][:-5]
@@ -71,11 +73,16 @@ def create_plots(sample_folder, amplified, threads=12):
                         elif line.split()[0].endswith("RIGHT"):
                             r = int(line.split()[7])
                             vals.append(statistics.median(cov1[l-1:r]))
+                            xnums.append(num)
                             labels.append(label)
-        fig, ax = plt.subplots()
-        ax.bar(labels, vals, orientation="horizontal")
-        fig.suptitle("Median coverage for primer set %s." % i[:-4], fontsize=16)
-        plt.savefig(pp, dpi=300)
+                            num += 1
+                fig, ax = plt.subplots()
+                ax.barh(xnums, vals)
+                plt.yticks(xnums, labels)
+                ax.set(ylabel="median depth", xlabel="primer set")
+                ax.tick_params(axis='both', which='minor', labelsize=8)
+                fig.suptitle("Median depth for primer set\n%s." % i[:-4], fontsize=10)
+                plt.savefig(pp, dpi=300)
     else:
         for suffix in os.listdir(sample_folder):
             read1 = None
@@ -112,31 +119,40 @@ def create_plots(sample_folder, amplified, threads=12):
                 fig, axs = plt.subplots(2, sharex=True, gridspec_kw={'hspace': 0})
                 axs[0].plot(cov1)
                 axs[1].plot(cov2)
-                fig.suptitle(suffix, fontsize=16)
+                fig.suptitle(suffix, fontsize=10)
                 for ax in axs.flat:
                     ax.set(xlabel='position', ylabel='coverage')
 
                 for ax in axs.flat:
                     ax.label_outer()
                 plt.savefig(pp, dpi=300)
-                for i in os.listdir(repo_dir + '/'):
-                    if i.startswith("SARS-CoV-2") and i.endswith(".tsv"):
-                        with open(os.path.join(repo_dir, i)) as f:
+
+                for i in os.listdir(repo_dir + '/db'):
+                    if i.startswith("SARS-CoV-2") and i.endswith(".csv"):
+                        with open(os.path.join(repo_dir, 'db', i)) as f:
                             labels = []
                             vals = []
+                            xnums = []
                             f.readline()
+                            num = 1
                             for line in f:
                                 if line.split()[0].endswith("LEFT"):
                                     label = line.split()[0][:-5]
                                     l = int(line.split()[7])
                                 elif line.split()[0].endswith("RIGHT"):
                                     r = int(line.split()[7])
-                                    vals.append(statistics.median(cov1[l - 1:r]))
+                                    vals.append(statistics.median(cov1[l-1:r]))
+                                    xnums.append(num)
                                     labels.append(label)
-                fig, ax = plt.subplots()
-                ax.bar(labels, vals, orientation="horizontal")
-                fig.suptitle("Median coverage for primer set %s with %s reads." % (i[:-4], suffix), fontsize=16)
-                plt.savefig(pp, dpi=300)
+                                    num += 1
+                        fig, ax = plt.subplots()
+                        ax.barh(xnums, vals)
+                        plt.yticks(xnums, labels)
+                        ax.tick_params(axis='both', which='minor', labelsize=8)
+                        ax.set(ylabel="median depth", xlabel="primer set")
+                        fig.suptitle("Median depth for primer set\n %s \nand reads %s." % (i[:-4], suffix), fontsize=10)
+                        plt.savefig(pp, dpi=300)
+
     subprocess.Popen("samtools bam2fq -f 4 -@ %d %s/pipeline/ref.bam | gzip > %s/kraken_input.fastq.gz" % (threads, sample_folder, qc_dir), shell=True).wait()
     subprocess.Popen("kraken2 --db /sc/arion/projects/vanbah01b/COVID/db/minikraken2_v2_8GB_201904_UPDATE"
                      " --quick --report %s/kraken_report.out --threads %d --output %s/kraken %s/kraken_input.fastq.gz" % (qc_dir, threads, qc_dir, qc_dir), shell=True).wait()
@@ -170,12 +186,9 @@ def create_plots(sample_folder, amplified, threads=12):
     explode[0] = 0.1
     ax.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
-    fig.suptitle("kraken assignment", fontsize=16)
+    fig.suptitle("kraken assignment", fontsize=10)
     plt.savefig(pp, dpi=300)
-
-
-
-
+    pp.close()
 
 
 if len(sys.argv) == 3:
