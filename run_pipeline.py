@@ -6,7 +6,7 @@ import sys, os
 
 
 repo_dir = sys.path[0]
-virus_length = 29760
+virus_length = 29903
 
 def run_illumina(args):
     read1s = []
@@ -21,9 +21,9 @@ def run_illumina(args):
             ion_reads = os.path.join(args.sample_folder, suffix)
         else:
             for i in os.listdir(os.path.join(args.sample_folder, suffix)):
-                if i.endswith("R1_001.fastq.gz"):
+                if i.endswith(args.read1_suffix):
                     read1s.append(os.path.join(args.sample_folder, suffix, i))
-                if i.endswith("R2_001.fastq.gz"):
+                if i.endswith(args.read2_suffix):
                     read2s.append(os.path.join(args.sample_folder, suffix, i))
     if not ion_reads is None:
         pass
@@ -59,12 +59,33 @@ def run_illumina(args):
             if not line.startswith('>'):
                 seq += line.rstrip()
     seq = list(seq)
+    with open(working_dir + '/pilon.changes') as f:
+        dels = set()
+        ins = set()
+        for line in f:
+            if line.split()[2] == '.':
+                start, stop = map(int, line.split()[1].split(':')[1].split('-'))
+                for num in range(start-1, stop):
+                    ins.add(num)
+
+            if line.split()[3] == '.':
+                start, stop = map(int, line.split()[0].split(':')[1].split('-'))
+                for num in range(start-1, stop):
+                    dels.add(num)
+
+
     with open(working_dir + '/pilonCoverage.wig') as f:
         f.readline()
         f.readline()
-        for num, line in enumerate(f):
+        qnum = 0
+        for refnum, line in enumerate(f):
+            while qnum in ins:
+                qnum += 1
+            if refnum in dels:
+                continue
             if int(line.rstrip()) < 10:
-                seq[num] = 'n'
+                seq[qnum] = 'n'
+            qnum += 1
     seq = ''.join(seq)
     if seq.endswith('a'):
         seq = seq.rstrip('a')
@@ -164,6 +185,8 @@ parser.add_argument('-s', '--sample', action='store', help='sample name')
 parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon')
 parser.add_argument('-v', '--version', action='store_true', help="print version and exit")
 parser.add_argument('-a', '--not_amplified', action='store_true', help="Skip cutadapt and assembly")
+parser.add_argument('-r1', '--read1_suffix', action='store', default="_1.fastq.gz", help='suffix for finding read 1')
+parser.add_argument('-r2', '--read2_suffix', action='store', default="_2.fastq.gz", help='suffix for finding read 2')
 
 
 args = parser.parse_args()

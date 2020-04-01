@@ -2,12 +2,13 @@ import os
 import sys
 import subprocess
 import matplotlib
+import argparse
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import statistics
 
-def create_plots(sample_folder, amplified, threads=12):
+def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix):
     repo_dir = sys.path[0]
     qc_dir = sample_folder + '/QC'
     if not os.path.exists(qc_dir):
@@ -36,14 +37,80 @@ def create_plots(sample_folder, amplified, threads=12):
                 length += len(line.rstrip())
                 ns += line.lower().count('n')
     fig.suptitle("all reads\nconsensus %d bp long\n%d Ns" % (length, ns), fontsize=10)
+    with open(qc_dir + '/report.txt', 'w') as o:
+        o.write('== all reads ==\n')
+        o.write("length: %d\n" % length)
+        o.write("Ns: %d\n" % ns)
+        o.write("max coverage: %d\n" % max(cov1))
+        o.write("median coverage: %d\n" % statistics.median(cov1))
     for ax in axs.flat:
         ax.set(xlabel='position', ylabel='coverage')
 
     for ax in axs.flat:
         ax.label_outer()
     plt.savefig(pp, dpi=300)
+    subprocess.Popen("samtools mpileup -f %s/db/COVID.fa %s/pipeline/ref.bam > %s/pileup" % (repo_dir, sample_folder, qc_dir), shell=True).wait()
+    with open("%s/pileup" % qc_dir) as f:
+        count_dict = {'a': [], 't': [], 'c': [], 'g': [], 'I': [], 'D': []}
+        positions = []
+        for line in f:
+            ref, pos, refbase, cov, seq, qual = line.split()
+            seq = seq.lower()
+            counts = {'a':0, 't':0, 'c':0, 'g':0, 'I':0, 'D':0}
+            depth = 0
+            seq = list(seq)
+            getdel = False
+            getins = False
+            while seq != []:
+                x = seq.pop(0)
+                mod = None
+                if x == '.' or x == ',':
+                    mod = refbase
+                elif x == '+':
+                    getins = True
+                    digit = ''
+                elif x == '-':
+                    getdel = True
+                    digit = ''
+                elif x.isdigit() and (getdel or getins):
+                    digit += x
+                elif getdel:
+                    if digit == '':
+                        pass
+                    else:
+                        for j in range(int(digit) -1):
+                            seq.pop(0)
+                    mod = 'D'
+                    getdel = False
+                elif getins:
+                    if digit == '':
+                        pass
+                    else:
+                        for j in range(int(digit) -1):
+                            seq.pop(0)
+                    mod = 'I'
+                    getins = False
+                elif x in ['a', 't', 'c', 'g']:
+                    mod = x
+                if not mod is None:
+                    counts[mod] += 1
+                    depth += 1
+            if depth >= 10 and counts[refbase] /depth < 0.9:
+                for i in counts:
+                    count_dict[i].append(counts[i])
+                positions.append(pos + ' (' + refbase + ')')
+    fig, ax = plt.subplots()
+    for i in count_dict:
+        ax.bar(positions, count_dict[i], 0.5, label=i)
 
+    ax.set_ylabel('Counts')
+    ax.set_title('Variants from reference')
+    ax.set_xlabel('Position (ref. base)')
 
+    plt.xticks(rotation=90)
+    ax.legend()
+    fig.subplots_adjust(bottom=0.2)
+    plt.savefig(pp, dpi=300)
     # by read coverage bit
     for suffix in os.listdir(sample_folder):
         read1 = None
@@ -51,9 +118,9 @@ def create_plots(sample_folder, amplified, threads=12):
         if suffix.endswith('.fastq'):
             continue
         for i in os.listdir(os.path.join(sample_folder, suffix)):
-            if i.endswith("R1_001.fastq.gz"):
+            if i.endswith(read1_suffix):
                 read1 = os.path.join(sample_folder, suffix, i)
-            if i.endswith("R2_001.fastq.gz"):
+            if i.endswith(read2_suffix):
                 read2 = os.path.join(sample_folder, suffix, i)
         if not read1 is None and not read2 is None:
             count += 1
@@ -88,9 +155,9 @@ def create_plots(sample_folder, amplified, threads=12):
             read1 = None
             read2 = None
             for i in os.listdir(os.path.join(sample_folder, suffix)):
-                if i.endswith("R1_001.fastq.gz"):
+                if i.endswith(read1_suffix):
                     read1 = os.path.join(sample_folder, suffix, i)
-                if i.endswith("R2_001.fastq.gz"):
+                if i.endswith(read2_suffix):
                     read2 = os.path.join(sample_folder, suffix, i)
             if not read1 is None and not read2 is None:
                 if amplified:
@@ -116,6 +183,9 @@ def create_plots(sample_folder, amplified, threads=12):
                         cov = int(line.split()[2])
                         cov1.append(cov)
                         cov2.append(min([100, cov]))
+
+
+
                 fig, axs = plt.subplots(2, sharex=True, gridspec_kw={'hspace': 0})
                 axs[0].plot(cov1)
                 axs[1].plot(cov2)
@@ -126,7 +196,6 @@ def create_plots(sample_folder, amplified, threads=12):
                 for ax in axs.flat:
                     ax.label_outer()
                 plt.savefig(pp, dpi=300)
-
                 for i in os.listdir(repo_dir + '/db'):
                     if i.startswith("SARS-CoV-2") and i.endswith(".csv"):
                         with open(os.path.join(repo_dir, 'db', i)) as f:
@@ -152,10 +221,42 @@ def create_plots(sample_folder, amplified, threads=12):
                         ax.set(ylabel="median depth", xlabel="primer set")
                         fig.suptitle("Median depth for primer set\n %s \nand reads %s." % (i[:-4], suffix), fontsize=10)
                         plt.savefig(pp, dpi=300)
+                while True:
+                    if cov1[0] >= 10:
+                        break
+                    cov1.pop(0)
+                    if cov1 == []:
+                        break
+                gotzero = False
+                while True:
+                    count = 0
+                    for i in cov1[-10:]:
+                        if i < 10:
+                            count += 1
+                    if count < 3 and gotzero:
+                        break
+                    x = cov1.pop()
+                    if x == 0:
+                        gotzero = True
+                    if cov1 == []:
+                        break
+                ns = 0
+                for i in cov1:
+                    if i <10:
+                        ns += 1
+                with open(qc_dir + '/report.txt', 'a') as o:
+                    o.write("== %s ==\n" % suffix)
+                    o.write("length: %d\n" % len(cov1))
+                    o.write("Ns: %d\n" % ns)
+                    o.write("max coverage: %d\n" % max(cov1))
+                    o.write("median coverage: %d\n" % statistics.median(cov1))
 
-    subprocess.Popen("samtools bam2fq -f 4 -@ %d %s/pipeline/ref.bam | gzip > %s/kraken_input.fastq.gz" % (threads, sample_folder, qc_dir), shell=True).wait()
+
+
+
+    subprocess.Popen("samtools bam2fq -f 4 -@ %s %s/pipeline/ref.bam | gzip > %s/kraken_input.fastq.gz" % (threads, sample_folder, qc_dir), shell=True).wait()
     subprocess.Popen("kraken2 --db /sc/arion/projects/vanbah01b/COVID/db/minikraken2_v2_8GB_201904_UPDATE"
-                     " --quick --report %s/kraken_report.out --threads %d --output %s/kraken %s/kraken_input.fastq.gz" % (qc_dir, threads, qc_dir, qc_dir), shell=True).wait()
+                     " --quick --report %s/kraken_report.out --threads %s --output %s/kraken %s/kraken_input.fastq.gz" % (qc_dir, threads, qc_dir, qc_dir), shell=True).wait()
     subprocess.Popen("samtools flagstat  %s/pipeline/ref.bam > %s/refbam.flagstat" % (sample_folder, qc_dir), shell=True).wait()
     with open("%s/refbam.flagstat" % qc_dir) as f:
         total_reads = int(f.readline().split()[0])
@@ -191,7 +292,22 @@ def create_plots(sample_folder, amplified, threads=12):
     pp.close()
 
 
-if len(sys.argv) == 3:
-    create_plots(sys.argv[1], False)
-else:
-    create_plots(sys.argv[1], True)
+__version__ = "0.1.1"
+parser = argparse.ArgumentParser(prog='COVID pipeline QC', formatter_class=argparse.RawDescriptionHelpFormatter,
+                                description='QC for the assembly, mapping, base calling of viruses\n' \
+                                            'Version: %s\n' 
+                                            'License: GPLv3\n'
+                                            'USAGE: python run_QC.py -i sample1' % __version__)
+
+
+parser.add_argument('-i', '--sample_folder', action='store', help='Sample folder created by process_run.py')
+parser.add_argument('-a', '--not_amplified', action='store_true', help="Skip cutadapt")
+parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
+parser.add_argument('-r1', '--read1_suffix', action='store', default="_1.fastq.gz", help='suffix for finding read 1')
+parser.add_argument('-r2', '--read2_suffix', action='store', default="_2.fastq.gz", help='suffix for finding read 2')
+
+
+
+args = parser.parse_args()
+
+create_plots(args.sample_folder, not args.not_amplified, args.threads, args.read1_suffix, args.read2_suffix)
