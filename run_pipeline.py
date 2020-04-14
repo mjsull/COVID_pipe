@@ -64,12 +64,18 @@ def run_illumina(args):
         ins = set()
         for line in f:
             if line.split()[2] == '.':
-                start, stop = map(int, line.split()[1].split(':')[1].split('-'))
+                if '-' in line:
+                    start, stop = map(int, line.split()[1].split(':')[1].split('-'))
+                else:
+                    start = stop = int(line.split()[1].split(':')[1])
                 for num in range(start-1, stop):
                     ins.add(num)
 
             if line.split()[3] == '.':
-                start, stop = map(int, line.split()[0].split(':')[1].split('-'))
+                if '-' in line:
+                    start, stop = map(int, line.split()[0].split(':')[1].split('-'))
+                else:
+                    start = stop = int(line.split()[0].split(':')[1])
                 for num in range(start-1, stop):
                     dels.add(num)
 
