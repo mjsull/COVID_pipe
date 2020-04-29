@@ -2,6 +2,14 @@
 
 A simple pipeline for the assembly, consensus calling and annotation of COVID.
 
+This pipeline is somewhat dependent on folder structures and naming schemes used by the HPC/sequencing core at Icahn School of Medicine.
+
+It also has the primer set hard-coded.
+
+Please ensure you understand how it works and what changes will need to be made if you plan on running on your own data. 
+I am happy to help (time permitting) so please reach out.
+
+
 #### To run this pipeline first create the conda environment for it to run in.
 
 ``` cd  <this directory>```
@@ -38,7 +46,7 @@ The following folder structure should exist
     │   <read_prefix>_2.fastq.gz
 ```
 
-n.b. can be run on as many read files as needed, each pair of reads should have it's own folder.
+n.b. can be run on one to as many read files as needed, each pair of reads should have it's own folder.
 
 will create **pipeline** folder in <sample_folder> with output.
 
