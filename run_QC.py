@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import statistics
 
-def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix):
+def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix, krakendb):
     repo_dir = sys.path[0]
     qc_dir = sample_folder + '/QC'
     if not os.path.exists(qc_dir):
@@ -149,6 +149,7 @@ def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix):
                 ax.set(ylabel="median depth", xlabel="primer set")
                 ax.tick_params(axis='both', which='minor', labelsize=8)
                 fig.suptitle("Median depth for primer set\n%s." % i[:-4], fontsize=10)
+
                 plt.savefig(pp, dpi=300)
     else:
         for suffix in os.listdir(sample_folder):
@@ -255,8 +256,8 @@ def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix):
 
 
     subprocess.Popen("samtools bam2fq -f 4 -@ %s %s/pipeline/ref.bam | gzip > %s/kraken_input.fastq.gz" % (threads, sample_folder, qc_dir), shell=True).wait()
-    subprocess.Popen("kraken2 --db /sc/arion/projects/vanbah01b/COVID/db/minikraken2_v2_8GB_201904_UPDATE"
-                     " --quick --report %s/kraken_report.out --threads %s --output %s/kraken %s/kraken_input.fastq.gz" % (qc_dir, threads, qc_dir, qc_dir), shell=True).wait()
+    subprocess.Popen("kraken2 --db %s --quick --report %s/kraken_report.out --threads %s --output %s/kraken %s/kraken_input.fastq.gz" %
+                     (krakendb, qc_dir, threads, qc_dir, qc_dir), shell=True).wait()
     subprocess.Popen("samtools flagstat  %s/pipeline/ref.bam > %s/refbam.flagstat" % (sample_folder, qc_dir), shell=True).wait()
     with open("%s/refbam.flagstat" % qc_dir) as f:
         total_reads = int(f.readline().split()[0])
@@ -305,9 +306,10 @@ parser.add_argument('-a', '--not_amplified', action='store_true', help="Skip cut
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
 parser.add_argument('-r1', '--read1_suffix', action='store', default="_1.fastq.gz", help='suffix for finding read 1')
 parser.add_argument('-r2', '--read2_suffix', action='store', default="_2.fastq.gz", help='suffix for finding read 2')
+parser.add_argument('-kdb', '--kraken_db', action='store', default="/sc/arion/projects/vanbah01b/COVID/db/minikraken2_v2_8GB_201904_UPDATE", help='location of kraken database')
 
 
 
 args = parser.parse_args()
 
-create_plots(args.sample_folder, not args.not_amplified, args.threads, args.read1_suffix, args.read2_suffix)
+create_plots(args.sample_folder, not args.not_amplified, args.threads, args.read1_suffix, args.read2_suffix, args.kraken_db)

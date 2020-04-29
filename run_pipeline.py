@@ -179,16 +179,23 @@ parser = argparse.ArgumentParser(prog='COVID pipeline', formatter_class=argparse
                                 description='pipeline for the assembly, mapping, base calling of viruses\n' \
                                             'Version: %s\n' 
                                             'License: GPLv3\n'
-                                            'USAGE: python -r1 <read1.fastq.gz> -r2 <read2.fastq.gz> -o sample1' % __version__)
-
+                                            'USAGE: python -i <sample_folder>'
+                                            'Sample folder should look like the following'
+                                            '<sample_folder>\n'
+                                            '└───<reads_15kb_primers>\n'
+                                            '│   │   <read_prefix>_1.fastq.gz\n'
+                                            '│   │   <read_prefix>_2.fastq.gz\n'
+                                            '└───<reads_2kb_primers>\n'
+                                            '    │   <read_prefix>_1.fastq.gz\n'
+                                            '    │   <read_prefix>_2.fastq.gz\n' % __version__)
 
 
 parser.add_argument('-i', '--sample_folder', action='store', help='Sample folder created by process_run.py')
 parser.add_argument('-p', '--ccs_reads', action='store', help='Pacbio CCS reads')
-parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory')
+parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory (only for CCS reads)')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
 parser.add_argument('-s', '--sample', action='store', help='sample name')
-parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon')
+parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon (only used for CCS reads)')
 parser.add_argument('-v', '--version', action='store_true', help="print version and exit")
 parser.add_argument('-a', '--not_amplified', action='store_true', help="Skip cutadapt and assembly")
 parser.add_argument('-r1', '--read1_suffix', action='store', default="_1.fastq.gz", help='suffix for finding read 1')
@@ -208,4 +215,4 @@ if not args.ccs_reads is None:
 elif not args.sample_folder is None:
     run_illumina(args)
 else:
-    sys.exit("Need read_1 and read_2 set or ccs_reads set")
+    sys.exit("Need to provide with sample folder or ccs reads")

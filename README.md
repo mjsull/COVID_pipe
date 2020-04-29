@@ -23,15 +23,29 @@ Threads can be specified with ```-t```
 
 #### For Illumina reads run:
 
-```python run_pipeline.py -i <illumina_directory> -o <output_folder> -s <samle_name>```
+```python run_pipeline.py -i <sample_folder>```
 
 
-The following folders should exist in ```illumina_directory```
+The following folder structure should exist
+ 
+```<sample_folder>
+└───<reads_15kb_primers>'
+│   │   <read_prefix>_1.fastq.gz
+│   │   <read_prefix>_2.fastq.gz
+│
+└───<reads_2kb_primers>
+    │   <read_prefix>_1.fastq.gz
+    │   <read_prefix>_2.fastq.gz
+```
 
-```<sample_name>-1-5p1 <sample_name>-1-5p2 <sample_name>-2p1 <sample_name>-2p2```
+n.b. can be run on as many read files as needed, each pair of reads should have it's own folder.
 
-or
+will create **pipeline** folder in <sample_folder> with output.
 
-```<sample_name>-1-5p1-1step <sample_name>-1-5p2-1step <sample_name>-2p1-1step <sample_name>-2p2-1step```
 
-each folder should contain a single pair of reads.
+
+##### running QC
+
+Finally to run QC do ```python run_QC.py -i <sample_folder> -kb /path/to/kraken_db```
+
+on any <sample_folder> that has run successfully.

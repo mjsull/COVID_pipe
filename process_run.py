@@ -32,7 +32,7 @@ def process_reads(args):
 __version__ = "0.1.1"
 parser = argparse.ArgumentParser(prog='COVID pipeline', formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description="""process_run - process an Illumina sars-ncov-2 run.
-    USE: looks for folders with a pair of reads in them, iterprets everything before the first hyphen as a sample name
+    USE: looks for folders with a pair of reads in them, interprets everything before the first underscore as a sample name
     then copies directories into output folder under sample name.
     USAGE: python process_run.py <illumina_run_dir> <output_dir>""")
 
