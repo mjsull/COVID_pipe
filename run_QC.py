@@ -249,8 +249,13 @@ def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix, 
                     o.write("== %s ==\n" % suffix)
                     o.write("length: %d\n" % len(cov1))
                     o.write("Ns: %d\n" % ns)
-                    o.write("max coverage: %d\n" % max(cov1))
-                    o.write("median coverage: %d\n" % statistics.median(cov1))
+                    if len(cov1) != 0:
+                        o.write("max coverage: %d\n" % max(cov1))
+                        o.write("median coverage: %d\n" % statistics.median(cov1))
+                    else:
+                        o.write("max coverage: 0\n")
+                        o.write("median coverage: 0\n")
+
 
 
 
