@@ -291,7 +291,7 @@ if args.version:
 
 if not args.ccs_reads is None:
     run_ccs(args)
-elif not args.themo_fischer is None:
+elif not args.thermo_fischer is None:
     run_thermo(args)
 elif not args.sample_folder is None:
     run_illumina(args)
