@@ -114,7 +114,7 @@ def run_illumina(args):
         subprocess.Popen("shovill --outdir %s/shovill --R1 %s --R2 %s --gsize %d --cpus %s"
                      % (working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
 
-def run_themo(args):
+def run_thermo(args):
     working_dir = os.path.join(args.sample_folder, "pipeline")
     sample = os.path.basename(args.sample_folder.rstrip('/'))
     thermo_bam = []
@@ -291,6 +291,8 @@ if args.version:
 
 if not args.ccs_reads is None:
     run_ccs(args)
+elif not args.themo_fischer is None:
+    run_thermo(args)
 elif not args.sample_folder is None:
     run_illumina(args)
 else:
