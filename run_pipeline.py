@@ -114,7 +114,85 @@ def run_illumina(args):
         subprocess.Popen("shovill --outdir %s/shovill --R1 %s --R2 %s --gsize %d --cpus %s"
                      % (working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
 
+def run_themo(args):
+    working_dir = os.path.join(args.sample_folder, "pipeline")
+    sample = os.path.basename(args.sample_folder.rstrip('/'))
+    thermo_bam = []
+    if not os.path.exists(working_dir):
+        os.makedirs(working_dir)
+    for i in os.listdir(os.path.join(args.sample_folder, "bams")):
+        if i.endswith(".bam"):
+            thermo_bam.append(os.path.join(args.sample_folder, i))
+    if len(thermo_bam) == 0:
+        sys.exit("Couldn't find any bamss in sample folder")
+    elif len(thermo_bam) == 1:
+        subprocess.Popen("samtools index %s" % thermo_bam[0])
+        subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                         "%s/TD01655_2/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s --tracks --output %s/pilon"
+                     % (args.threads, repo_dir, thermo_bam[0], working_dir), shell=True).wait()
+    else:
+        subprocess.Popen("samtools merge %s > %s/concat.bam" % (" ".join(thermo_bam), working_dir))
+        subprocess.Popen("samtools index %s/concat.bam" % working_dir)
+        subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                         "%s/TD01655_2/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s/concat.bam --tracks --output %s/pilon"
+                          % (args.threads, repo_dir, working_dir, working_dir), shell=True).wait()
+    with open(working_dir + '/pilon.fasta') as f:
+        seq = ''
+        for line in f:
+            if not line.startswith('>'):
+                seq += line.rstrip()
+    seq = list(seq)
+    with open(working_dir + '/pilon.changes') as f:
+        dels = set()
+        ins = set()
+        for line in f:
+            if line.split()[2] == '.':
+                if '-' in line:
+                    start, stop = map(int, line.split()[1].split(':')[1].split('-'))
+                else:
+                    start = stop = int(line.split()[1].split(':')[1])
+                for num in range(start-1, stop):
+                    ins.add(num)
 
+            if line.split()[3] == '.':
+                if '-' in line:
+                    start, stop = map(int, line.split()[0].split(':')[1].split('-'))
+                else:
+                    start = stop = int(line.split()[0].split(':')[1])
+                for num in range(start-1, stop):
+                    dels.add(num)
+
+
+    with open(working_dir + '/pilonCoverage.wig') as f:
+        f.readline()
+        f.readline()
+        qnum = 0
+        for refnum, line in enumerate(f):
+            while qnum in ins:
+                qnum += 1
+            if refnum in dels:
+                continue
+            if int(line.rstrip()) < 10:
+                seq[qnum] = 'n'
+            qnum += 1
+    seq = ''.join(seq)
+    if seq.endswith('a'):
+        seq = seq.rstrip('a')
+    seq = seq.strip('n')
+    while True:
+        if len(seq) < 10:
+            break
+        if seq[-10:].count('n') < 3:
+            break
+        seq = seq[:-1]
+        seq = seq.rstrip('n')
+    with open(working_dir + '/%s.fasta' % sample, 'w') as o:
+        o.write(">%s\n" % sample)
+        for i in range(0, len(seq), 80):
+            o.write(seq[i:i + 80] + '\n')
+    subprocess.Popen(
+        "prokka --force --cpus %s --outdir %s/prokka --prefix %s --kingdom Viruses --proteins %s/db/COVID.gbk  %s/%s.fasta "
+        % (args.threads, working_dir, sample, repo_dir, working_dir, sample), shell=True).wait()
 
 def run_ccs(args):
     subprocess.Popen("cutadapt -j %s -g file:%s/db/SARS-CoV-2_primers_5prime_anchored.fa -a "
@@ -191,6 +269,7 @@ parser = argparse.ArgumentParser(prog='COVID pipeline', formatter_class=argparse
 
 
 parser.add_argument('-i', '--sample_folder', action='store', help='Sample folder created by process_run.py')
+parser.add_argument('-b', '--thermo_fischer', action='store', help='Sample folder with thermofischer bams present')
 parser.add_argument('-p', '--ccs_reads', action='store', help='Pacbio CCS reads')
 parser.add_argument('-o', '--working_dir', action='store', default="temp", help='working directory (only for CCS reads)')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
