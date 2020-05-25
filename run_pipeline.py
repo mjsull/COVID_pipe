@@ -115,14 +115,14 @@ def run_illumina(args):
                      % (working_dir, pilon_read_1, pilon_read_2, virus_length, args.threads), shell=True).wait()
 
 def run_thermo(args):
-    working_dir = os.path.join(args.sample_folder, "pipeline")
-    sample = os.path.basename(args.sample_folder.rstrip('/'))
+    working_dir = os.path.join(args.thermo_fischer, "pipeline")
+    sample = os.path.basename(args.thermo_fischer.rstrip('/'))
     thermo_bam = []
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
-    for i in os.listdir(os.path.join(args.sample_folder, "bams")):
+    for i in os.listdir(os.path.join(args.thermo_fischer, "bams")):
         if i.endswith(".bam"):
-            thermo_bam.append(os.path.join(args.sample_folder, i))
+            thermo_bam.append(os.path.join(args.thermo_fischer, "bams", i))
     if len(thermo_bam) == 0:
         sys.exit("Couldn't find any bamss in sample folder")
     elif len(thermo_bam) == 1:
