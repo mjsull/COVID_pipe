@@ -128,7 +128,7 @@ def run_thermo(args):
     elif len(thermo_bam) == 1:
         subprocess.Popen("samtools index %s" % thermo_bam[0], shell=True).wait()
         subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
-                         "%s/TD01655_2/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s --tracks --output %s/pilon"
+                         "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s --tracks --output %s/pilon"
                      % (args.threads, repo_dir, thermo_bam[0], working_dir), shell=True).wait()
     else:
         subprocess.Popen("samtools merge %s > %s/concat.bam" % (" ".join(thermo_bam), working_dir), shell=True).wait()
