@@ -11,14 +11,14 @@ def run_variant_analysis(args):
     read_1 = "%s/pipeline/combined.1.fastq.gz" % sample_folder
     read_2 = "%s/pipeline/combined.2.fastq.gz" % sample_folder
     fasta = sample_folder + '/pipeline/' + sample + '.fasta'
-    # subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
-    #                  " && samtools index %s/ref.bam"
-    #                  % (threads, fasta, read_1, read_2, args.threads, outdir, outdir), shell=True).wait()
-    # subprocess.Popen("samtools mpileup -f %s %s/ref.bam > %s/pileup" % (fasta, outdir, outdir), shell=True).wait()
+    subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
+                     " && samtools index %s/ref.bam"
+                     % (threads, fasta, read_1, read_2, args.threads, outdir, outdir), shell=True).wait()
+    subprocess.Popen("samtools mpileup -f %s %s/ref.bam > %s/pileup" % (fasta, outdir, outdir), shell=True).wait()
     modlist = ['a', 't', 'c', 'g', 'n', 'I', 'D']
     outseq = ''
     with open("%s/pileup" % outdir) as f, open("%s/variable_bases.tsv" % outdir, "w") as out:
-        out.write("reference\tposition\treference_base\tcoverage\reference_base_fraction\tflagged\ta\tt\tc\tg\tn\tinsertion\tdeletion\n")
+        out.write("reference\tposition\treference_base\tcoverage\treference_base_fraction\tflagged\ta\tt\tc\tg\tn\tinsertion\tdeletion\n")
         for line in f:
             ref, pos, refbase, cov, seq, qual = line.split()
             refbase = refbase.lower()
@@ -62,8 +62,14 @@ def run_variant_analysis(args):
                 if not mod is None:
                     counts[mod] += 1
                     depth += 1
-            fraction = counts[refbase]/depth
-            if fraction < args.min_ratio:
+            try:
+                fraction = counts[refbase]/depth
+            except ZeroDivisionError:
+                fraction = None
+            if fraction is None:
+                flagged = "no_cov"
+                outseq += refbase
+            elif fraction < args.min_ratio:
                 flagged = "FLAGGED"
                 outseq += 'n'
             else:
