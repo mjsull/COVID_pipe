@@ -49,23 +49,78 @@ def create_plots(sample_folder, amplified, threads, read1_suffix, read2_suffix, 
     for ax in axs.flat:
         ax.label_outer()
     plt.savefig(pp, dpi=300)
-    with open("%s/variants/variable_bases.tsv" % sample_folder) as f:
-        f.readline()
+    with open("%s/variants/pileup" % sample_folder) as f:
+        count_dict = {'a': [], 't': [], 'c': [], 'g': [],'n': [], 'I': [], 'D': []}
         positions = []
-        fractions = []
         for line in f:
-            ref, pos, refbase, cov, fraction, flagged = line.split()
-        fractions.append(float(fraction))
-        positions.append(pos + ' (' + refbase + ')')
+            ref, pos, refbase, cov, seq, qual = line.split()
+            seq = seq.lower()
+            refbase = refbase.lower()
+            counts = {'a':0, 't':0, 'c':0, 'g':0, 'n':0, 'I':0, 'D':0}
+            depth = 0
+            seq = list(seq)
+            getdel = False
+            getins = False
+            while seq != []:
+                x = seq.pop(0)
+                mod = None
+                if x == '.' or x == ',':
+                    mod = refbase
+                elif x == '+':
+                    getins = True
+                    digit = ''
+                elif x == '-':
+                    getdel = True
+                    digit = ''
+                elif x.isdigit() and (getdel or getins):
+                    digit += x
+                elif getdel:
+                    for j in range(int(digit) -1):
+                        seq.pop(0)
+                    mod = 'D'
+                    getdel = False
+                elif getins:
+                    for j in range(int(digit) -1):
+                        seq.pop(0)
+                    mod = 'I'
+                    getins = False
+                elif x == '^':
+                    seq.pop(0)
+                elif x in ['a', 't', 'c', 'g']:
+                    mod = x
+                elif x in ['$', '*']:
+                    pass
+                else:
+                    sys.exit("Base not recognised " + x)
+                if not mod is None:
+                    counts[mod] += 1
+                    depth += 1
+            if  refbase == 'n':
+                continue
+            if depth >= 10 and counts[refbase] /depth <= 0.85:
+                for i in counts:
+                    count_dict[i].append(round(counts[i] /depth,2))                
+                positions.append(pos + ' (' + refbase + ')\n['+str(depth)+']')
+                
     fig, ax = plt.subplots()
-    ax.bar(positions, fractions, 0.5, label=i)
-    ax.set_ylabel('Counts')
+    #count_dict=sorted(count_dict.items(), key=operator.itemgetter(1)).reverse()
+    print(count_dict)
+    prev_key='start'
+    for i in count_dict:
+        if prev_key=='start':
+            bottom_val=[0]*len(positions)
+        else:                        
+            bottom_val=[x + y for x, y in zip(bottom_val, count_dict[prev_key])]
+        ax.bar(positions, count_dict[i],0.5, label=i,bottom=bottom_val)
+        prev_key=i
+        
+        
+    ax.set_ylabel('Proportions')
     ax.set_title('Variants from reference')
-    ax.set_xlabel('Position (ref. base)')
-
+    ax.set_xlabel('Position (ref. base)\n[read count]')
     plt.xticks(rotation=90)
     ax.legend()
-    fig.subplots_adjust(bottom=0.2)
+    fig.subplots_adjust(bottom=0.3)
     plt.savefig(pp, dpi=300)
     # by read coverage bit
     for suffix in os.listdir(sample_folder):
