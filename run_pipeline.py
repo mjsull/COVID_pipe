@@ -146,8 +146,9 @@ def run_thermo(args):
         dels = set()
         ins = set()
         for line in f:
+            
             if line.split()[2] == '.':
-                if '-' in line:
+                if '-' in line.split()[1].split(':')[1]:
                     start, stop = map(int, line.split()[1].split(':')[1].split('-'))
                 else:
                     start = stop = int(line.split()[1].split(':')[1])
@@ -155,7 +156,7 @@ def run_thermo(args):
                     ins.add(num)
 
             if line.split()[3] == '.':
-                if '-' in line:
+                if '-' in line.split()[1].split(':')[1]:
                     start, stop = map(int, line.split()[0].split(':')[1].split('-'))
                 else:
                     start = stop = int(line.split()[0].split(':')[1])
