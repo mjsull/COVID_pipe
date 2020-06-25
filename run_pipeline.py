@@ -116,6 +116,7 @@ def run_illumina(args):
 
 def run_thermo(args):
     working_dir = os.path.join(args.thermo_fischer, "pipeline")
+    illumina_bam_dir = os.path.join(args.thermo_fischer, "illumina_bam")
     sample = os.path.basename(args.thermo_fischer.rstrip('/'))
     thermo_bam = []
     if not os.path.exists(working_dir):
@@ -127,14 +128,25 @@ def run_thermo(args):
         sys.exit("Couldn't find any bamss in sample folder")
     elif len(thermo_bam) == 1:
         subprocess.Popen("samtools index %s" % thermo_bam[0], shell=True).wait()
-        subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
-                         "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s --tracks --output %s/pilon"
-                     % (args.threads, repo_dir, thermo_bam[0], working_dir), shell=True).wait()
+        if os.path.exisits(illumina_bam_dir+'/ref.bam'):
+            subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                            "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --frags %s/ref.bam --unpaired %s --tracks --output %s/pilon"
+                        % (args.threads, repo_dir, illumina_bam_dir,thermo_bam[0], working_dir), shell=True).wait()
+        else:
+            subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                            "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s --tracks --output %s/pilon"
+                        % (args.threads, repo_dir, thermo_bam[0], working_dir), shell=True).wait()
     else:
         subprocess.Popen("samtools merge %s > %s/concat.bam" % (" ".join(thermo_bam), working_dir), shell=True).wait()
         subprocess.Popen("samtools index %s/concat.bam" % working_dir, shell=True).wait()
-        subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
-                         "%s/TD01655_2/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s/concat.bam --tracks --output %s/pilon"
+        if os.path.exisits(illumina_bam_dir+'/ref.bam'):
+            subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                         "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --frags %s/ref.bam --unpaired %s/concat.bam --tracks --output %s/pilon"
+                          % (args.threads, repo_dir, illumina_bam_dir, working_dir, working_dir), shell=True).wait()
+            
+        else:
+            subprocess.Popen("pilon --targets 2019-nCoV --fix bases --changes --vcf --threads %s --mindepth 10 --genome "
+                         "%s/db/Ion_AmpliSeq_SARS-CoV-2_reference.fa --unpaired %s/concat.bam --tracks --output %s/pilon"
                           % (args.threads, repo_dir, working_dir, working_dir), shell=True).wait()
     with open(working_dir + '/pilon.fasta') as f:
         seq = ''
@@ -156,7 +168,7 @@ def run_thermo(args):
                     ins.add(num)
 
             if line.split()[3] == '.':
-                if '-' in line.split()[1].split(':')[1]:
+                if '-' in line.split()[0].split(':')[1]:
                     start, stop = map(int, line.split()[0].split(':')[1].split('-'))
                 else:
                     start = stop = int(line.split()[0].split(':')[1])
