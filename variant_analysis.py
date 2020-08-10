@@ -11,9 +11,9 @@ def run_variant_analysis(args):
     read_1 = "%s/pipeline/combined.1.fastq.gz" % sample_folder
     read_2 = "%s/pipeline/combined.2.fastq.gz" % sample_folder
     fasta = sample_folder + '/pipeline/' + sample + '.fasta'
-    subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
+    subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samclip --ref %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
                      " && samtools index %s/ref.bam"
-                     % (threads, fasta, read_1, read_2, args.threads, outdir, outdir), shell=True).wait()
+                     % (threads, fasta, read_1, read_2, fasta, args.threads, outdir, outdir), shell=True).wait()
     subprocess.Popen("samtools mpileup -f %s %s/ref.bam > %s/pileup" % (fasta, outdir, outdir), shell=True).wait()
     modlist = ['a', 't', 'c', 'g', 'n', 'I', 'D']
     outseq = ''

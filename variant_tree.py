@@ -3,7 +3,7 @@ from ete3 import Tree, RectFace, AttrFace, TextFace
 from ete3 import NodeStyle
 from ete3 import TreeStyle
 
-def get_profile_pileuo(args):
+def get_profile_pileup(args):
     outlist = []
     with open(args.pileup) as f:
         for line in f:
@@ -71,7 +71,7 @@ def get_array(args, variant_sites):
     outdict = {}
     seq_dict = {}
     ref_name = args.reference_name
-    with open(args.multiple_alignmetn) as f:
+    with open(args.multiple_alignment) as f:
         for line in f:
             if line.startswith(">"):
                 name = line.split()[0][1:]
@@ -147,7 +147,7 @@ def draw_tree(variant_dict, the_tree):
 
 
 
-
+__version__ = "0.0.1"
 
 
 
@@ -160,15 +160,18 @@ parser = argparse.ArgumentParser(prog='Variant_tree.py', formatter_class=argpars
                                             'USAGE: python -p output.pileup -m multiple_alignment -r reference_name -t tree.nwk' % __version__)
 
 
-parser.add_argument('-p', '--sample_folder', action='store', help='Sample folder created by process_run.py')
 parser.add_argument('-m', '--multiple_alignment', action='store', default="12", help='number of threads to use')
 parser.add_argument('-r', '--reference_name', action='store', help='number of threads to use')
 parser.add_argument('-t', '--tree', action='store', help='number of threads to use')
+parser.add_argument('-p', '--pileup', action='store', help='pileup of reads')
 parser.add_argument('-f', '--min_fraction', action='store', default=0.05, help='minimum fraction of alternate to flag')
-parser.add_argument('-c', '--min_coverage', action='store', default=40, help='minimum depth to consider site')
+parser.add_argument('-d', '--min_depth', action='store', default=40, help='minimum depth to consider site')
 parser.add_argument('-v', '--include_variants', action='store_true')
 
 
 
 args = parser.parse_args()
-run_variant_analysis(args)
+variant_sites = get_profile_pileup(args)
+variant_dict = get_array(args, variant_sites)
+print(variant_dict)
+draw_tree(variant_dict, args.tree)
