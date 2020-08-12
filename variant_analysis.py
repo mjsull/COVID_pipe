@@ -1,5 +1,5 @@
 import sys, os, argparse, subprocess
-
+import pysam
 
 def run_variant_analysis(args):
     sample_folder = args.sample_folder
@@ -11,10 +11,35 @@ def run_variant_analysis(args):
     read_1 = "%s/pipeline/combined.1.fastq.gz" % sample_folder
     read_2 = "%s/pipeline/combined.2.fastq.gz" % sample_folder
     fasta = sample_folder + '/pipeline/' + sample + '.fasta'
-    subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samclip --ref %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
+    subprocess.Popen("minimap2 -t %s -ax sr %s %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
                      " && samtools index %s/ref.bam"
-                     % (threads, fasta, read_1, read_2, fasta, args.threads, outdir, outdir), shell=True).wait()
-    subprocess.Popen("samtools mpileup -f %s %s/ref.bam > %s/pileup" % (fasta, outdir, outdir), shell=True).wait()
+                     % (threads, fasta, read_1, read_2, args.threads, outdir, outdir), shell=True).wait()
+    samfile = pysam.AlignmentFile("%s/ref.bam" % outdir, 'rb')
+    outsam = pysam.AlignmentFile("%s/ref2.bam" % outdir, "wb", template=samfile)
+    stored_reads_1 = {}
+    stored_reads_2 = {}
+    for read in samfile.fetch(until_eof=True):
+        if not read.cigartuples is None:
+            getit = True
+            for i in read.cigartuples:
+                if i[0] == 4 or i[0] == 5:
+                    getit = False
+                    break
+            if not read.is_supplementary and not read.is_secondary and getit:
+                if read.is_read1 and read.query_name in stored_reads_2:
+                    outsam.write(stored_reads_2[read.query_name])
+                    del stored_reads_2[read.query_name]
+                    outsam.write(read)
+                elif read.is_read1:
+                    stored_reads_1[read.query_name] = read
+                elif read.is_read2 and read.query_name in stored_reads_1:
+                    outsam.write(stored_reads_1[read.query_name])
+                    del stored_reads_1[read.query_name]
+                    outsam.write(read)
+                elif read.is_read2:
+                    stored_reads_2[read.query_name] = read
+    outsam.close()
+    subprocess.Popen("samtools sort -o %s/ref3.bam %s/ref2.bam && samtools index %s/ref3.bam && samtools mpileup -f %s %s/ref3.bam > %s/pileup" % (outdir, outdir, outdir, fasta, outdir, outdir), shell=True).wait()
     modlist = ['a', 't', 'c', 'g', 'n', 'I', 'D']
     outseq = ''
     with open("%s/pileup" % outdir) as f, open("%s/variable_bases.tsv" % outdir, "w") as out:
@@ -97,7 +122,7 @@ parser = argparse.ArgumentParser(prog='COVID variant pipeline', formatter_class=
 
 parser.add_argument('-i', '--sample_folder', action='store', help='Sample folder created by process_run.py')
 parser.add_argument('-t', '--threads', action='store', default="12", help='number of threads to use')
-parser.add_argument('-m', '--min_ratio', action='store', default=0.66, help='number of threads to use')
+parser.add_argument('-m', '--min_ratio', action='store', default=0.85, help='number of threads to use')
 
 
 
