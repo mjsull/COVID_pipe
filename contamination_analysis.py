@@ -112,7 +112,9 @@ def get_profile_pileup(args, var_dict):
             if depth >= args.min_depth:
                 if pos in var_dict:
                     varout = [str(pos), str(depth)]
-                    for i in ['a', 't', 'c', 'g']:
+                    bases = ['a', 't', 'c', 'g']
+                    bases.sort(key=lambda x: counts[x], reverse=True)
+                    for i in bases:
                         if counts[i] /depth > args.min_fraction and counts[i] > args.min_variant_count and i in var_dict[pos]:
                             varout += [i, var_dict[pos][i], str(counts[i])]
                     if len(varout) > 5:
