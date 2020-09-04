@@ -20,8 +20,23 @@ def run_variant_analysis(args):
             ref_base = line.split()[2]
             new_base = line.split()[3]
             changes[pos] = (ref_base, new_base)
+    primer_positions = set()
+    with open(os.path.join(repo_dir, "db", "SARS-CoV-2_primers_2kb_set.csv")) as f:
+        f.readline()
+        for line in f:
+            name, seq, pool, length, tm, gc, start, end = line.split()
+            start, end = int(start), int(end)
+            for i in range(min([start, end]), max(start,end)):
+                primer_positions.add(i)
+    with open(os.path.join(repo_dir, "db", "SARS-CoV-2_primers_1.5kb_set.csv")) as f:
+        f.readline()
+        for line in f:
+            name, seq, pool, length, tm, gc, start, end = line.split()
+            start, end = int(start), int(end)
+            for i in range(min([start, end]), max(start,end)):
+                primer_positions.add(i)
     with open("%s/pileup" % outdir) as f, open("%s/variable_bases.tsv" % outdir, "w") as out:
-        out.write("reference\tposition\tflagged\treference_base\tpilon_base\tdepth\treference_base_fraction\tforward_depth"
+        out.write("reference\tposition\tflagged\tin_primer\treference_base\tpilon_base\tdepth\treference_base_fraction\tforward_depth"
                   "\tforward_fraction\treverse_detph\treverse_fraction\tA\tT\tC\tG\ta\tt\tc\tg\tn\tinsertion\tdeletion\n")
         for line in f:
             ref, pos, refbase, cov, seq, qual = line.split()
@@ -110,7 +125,11 @@ def run_variant_analysis(args):
             else:
                 flagged = "OK"
                 outseq += new_refbase
-            outlist = [ref, pos, flagged, refbase, new_refbase, cov, fraction, forward_depth, forward_fraction, reverse_depth, reverse_fraction]
+            if int(pos) in primer_positions:
+                inprimer = "Y"
+            else:
+                inprimer = "N"
+            outlist = [ref, pos, flagged, inprimer, refbase, new_refbase, cov, fraction, forward_depth, forward_fraction, reverse_depth, reverse_fraction]
             for i in modlist:
                 outlist.append(counts[i])
             out.write('\t'.join(map(str, outlist)) + '\n')
