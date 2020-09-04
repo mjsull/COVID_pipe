@@ -157,7 +157,7 @@ if not args.input_dir is None:
     ref_fasta = working_dir + '/ref.fa'
     args.multiple_alignment = os.path.join(repo_dir, 'db', 'multiple_alignment.fa')
     args.lineage_file = os.path.join(repo_dir, 'db', 'lineage_report.csv')
-    args.reference_name = "Sequence_Identifier:VS_7528.aid_7029.SARS-CoV-2|Sample_Identifier:VS_7528|Sample_Name:PV13343|Segment:SARS-CoV-2"
+    args.reference_name = "MN908947"
     var_dict, ref_seq = get_variants(args)
     with open(ref_fasta, 'w') as o:
         o.write(">" + args.reference_name + "\n" + ref_seq.replace('-', '') + "\n")
