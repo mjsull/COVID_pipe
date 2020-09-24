@@ -20,7 +20,7 @@ def process_reads(args):
                     gotr2 = True
             if gotr1 and gotr2 and len(os.listdir(os.path.join(args.input_folder, i))) == 2:
                 sys.stderr.write("Moving %s to sample %s in output directory.\n" % (i, sample_name))
-                shutil.copytree(os.path.join(args.input_folder, i), os.path.join(args.output_folder, sample_name, i))
+                shutil.copytree(os.path.join(args.input_folder, i), os.path.join(args.output_folder, os.path.basename(args.input_folder), i))
             elif not gotr1 or not gotr2:
                 sys.stdout.write("Reads not found in folder %s.\n" % i)
             else:
