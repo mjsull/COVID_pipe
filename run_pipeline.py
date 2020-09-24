@@ -290,8 +290,8 @@ parser.add_argument('-s', '--sample', action='store', help='sample name')
 parser.add_argument('-c', '--coverage_pilon', default=200, type=int, action='store', help='downsample to this coverage for pilon (only used for CCS reads)')
 parser.add_argument('-v', '--version', action='store_true', help="print version and exit")
 parser.add_argument('-a', '--not_amplified', action='store_true', help="Skip cutadapt and assembly")
-parser.add_argument('-r1', '--read1_suffix', action='store', default="_1.fastq.gz", help='suffix for finding read 1')
-parser.add_argument('-r2', '--read2_suffix', action='store', default="_2.fastq.gz", help='suffix for finding read 2')
+parser.add_argument('-r1', '--read1_suffix', action='store', default="R1_001.fastq.gz", help='suffix for finding read 1')
+parser.add_argument('-r2', '--read2_suffix', action='store', default="R2_001.fastq.gz", help='suffix for finding read 2')
 
 
 args = parser.parse_args()
