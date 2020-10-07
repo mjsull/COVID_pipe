@@ -17,7 +17,9 @@ def run_illumina(args):
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
     for suffix in os.listdir(args.sample_folder):
-        if suffix.endswith('Z.fastq'):
+        if suffix == '.DS_Store':
+            pass
+        elif suffix.endswith('Z.fastq'):
             ion_reads = os.path.join(args.sample_folder, suffix)
         else:
             for i in os.listdir(os.path.join(args.sample_folder, suffix)):
