@@ -41,7 +41,7 @@ def run_variant_analysis(args):
         for line in f:
             ref, pos, refbase, cov, seq, qual = line.split()
             refbase = refbase.lower()
-            if pos in changes and len(changes[pos][0]) == 1 and len(changes[pos][1]) == 1:
+            if pos in changes and len(changes[pos][0]) == 1 and len(changes[pos][1]) == 1 and changes[pos][0] != '.':
                 if refbase != changes[pos][0].lower():
                     sys.exit("pilup doesn't match pilon output")
                 new_refbase = changes[pos][1].lower()
