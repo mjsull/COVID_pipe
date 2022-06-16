@@ -53,8 +53,17 @@ def run_illumina(args):
     subprocess.Popen("minimap2 -t %s -ax sr %s/db/COVID.fa %s %s | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
                      " && samtools index %s/ref.bam"
                      % (args.threads, repo_dir, pilon_read_1, pilon_read_2, args.threads, working_dir, working_dir), shell=True).wait()
+    subprocess.Popen("mv %s/ref.bam %s/ref_clipped.bam"
+            " && mv %s/ref.bam.bai %s/ref_clipped.bam.bai"
+            " && samtools view -H %s/ref_clipped.bam > %s/tmp_header.bam"
+            " && samtools view %s/ref_clipped.bam | awk -F '\t' -v OFS='\t' '$6!~/S/' > %s/tmp_ref.bam"
+            " && cat %s/tmp_header.bam %s/tmp_ref.bam | samtools view -b | samtools sort -@ %s -o %s/ref.bam -"
+            " && samtools index %s/ref.bam"
+            " && rm -f %s/tmp*bam"
+            % (working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, working_dir, workin    g_dir), shell=True).wait()
     subprocess.Popen("pilon --fix bases --changes --vcf --threads %s --mindepth 10 --genome %s/db/COVID.fa --frags %s/ref.bam --tracks --output %s/pilon"
                      % (args.threads, repo_dir, working_dir, working_dir), shell=True).wait()
+    
     with open(working_dir + '/pilon.fasta') as f:
         seq = ''
         for line in f:
